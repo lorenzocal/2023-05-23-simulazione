@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 
 import it.polito.tdp.baseball.model.Appearances;
-import it.polito.tdp.baseball.model.Arco;
 import it.polito.tdp.baseball.model.People;
 import it.polito.tdp.baseball.model.Team;
 
@@ -192,5 +191,135 @@ public class BaseballDAO {
 		}
 		return null;
 	}
+	
+	public List<Integer> getAllAnni(){
+		String sql = "SELECT year "
+				+ "FROM appearances "
+				+ "GROUP BY year";
+		List<Integer> result = new ArrayList<>();
 
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				result.add(rs.getInt("year"));
+			}
+
+			conn.close();
+			return result;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
+	
+	public List<People> getAllVertexes(Integer year, Integer salary){
+		String sql = "SELECT p.* "
+				+ "FROM people p, salaries s "
+				+ "WHERE p.playerID = s.playerID "
+				+ "AND s.year = ? "
+				+ "GROUP BY s.playerID "
+				+ "HAVING AVG(s.salary) > ?";
+		List<People> result = new ArrayList<People>();
+
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, year);
+			st.setInt(2, salary);
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				result.add(new People(rs.getString("playerID"), 
+						rs.getString("birthCountry"), 
+						rs.getString("birthCity"), 
+						rs.getString("deathCountry"), 
+						rs.getString("deathCity"),
+						rs.getString("nameFirst"), 
+						rs.getString("nameLast"), 
+						rs.getInt("weight"), 
+						rs.getInt("height"), 
+						rs.getString("bats"), 
+						rs.getString("throws"),
+						getBirthDate(rs), 
+						getDebutDate(rs), 
+						getFinalGameDate(rs), 
+						getDeathDate(rs)) );
+			}
+
+			conn.close();
+			return result;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
+	
+	public boolean isConnected(Integer year, People p1, People p2){
+		String sql = "SELECT COUNT(*) AS result "
+				+ "FROM appearances a1, appearances a2 "
+				+ "WHERE a1.`year` = a2.`year` "
+				+ "AND a1.`year` = ? "
+				+ "AND a1.teamID = a2.teamID "
+				+ "AND a1.playerID = ? "
+				+ "AND a2.playerID = ?";
+		boolean result = false;
+
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, year);
+			st.setString(2, p1.getPlayerID());
+			st.setString(3, p2.getPlayerID());
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				if (rs.getInt("result") > 0) {
+					result = true;
+				}
+			}
+
+			conn.close();
+			return result;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
+	
+	public Double salaryPlayerYear(Integer year, People player){
+		String sql = "SELECT AVG(salary) AS salary "
+				+ "FROM salaries "
+				+ "WHERE year = ? "
+				+ "AND playerID = ?";
+		double result = 0;
+
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, year);
+			st.setString(2, player.getPlayerID());
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				result = rs.getDouble("salary");
+			}
+
+			conn.close();
+			return result;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
 }
